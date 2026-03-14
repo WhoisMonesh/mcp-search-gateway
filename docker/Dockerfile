@@ -14,7 +14,7 @@ RUN apk add --no-cache python3 make g++
 
 # Copy dependency manifests and install ALL deps (including devDeps for build)
 COPY package*.json ./
-RUN npm ci --include=dev
+RUN npm install
 
 # Copy source and build TypeScript
 COPY tsconfig.json ./
@@ -31,7 +31,7 @@ WORKDIR /app
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist

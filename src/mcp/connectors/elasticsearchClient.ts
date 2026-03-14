@@ -1,4 +1,4 @@
-import { Client, ClientOptions } from '@elastic/elasticsearch';
+import { Client } from '@elastic/elasticsearch';
 import fs from 'fs';
 import { ElasticsearchConfig } from '../../config/types.js';
 
@@ -10,7 +10,8 @@ import { ElasticsearchConfig } from '../../config/types.js';
 export function createElasticsearchClient(cfg: ElasticsearchConfig | undefined): Client | undefined {
   if (!cfg || !cfg.url) return undefined;
 
-  const clientOptions: ClientOptions = { node: cfg.url };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clientOptions: any = { node: cfg.url };
 
   // TLS configuration
   if (cfg.caCertPath) {

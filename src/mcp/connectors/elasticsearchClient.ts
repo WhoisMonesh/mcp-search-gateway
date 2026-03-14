@@ -1,4 +1,4 @@
-import { Client } from '@elastic/elasticsearch';
+import { Client, ClientOptions } from '@elastic/elasticsearch';
 import fs from 'fs';
 import { ElasticsearchConfig } from '../../config/types.js';
 
@@ -10,7 +10,7 @@ import { ElasticsearchConfig } from '../../config/types.js';
 export function createElasticsearchClient(cfg: ElasticsearchConfig | undefined): Client | undefined {
   if (!cfg || !cfg.url) return undefined;
 
-  const clientOptions: Record<string, unknown> = { node: cfg.url };
+  const clientOptions: ClientOptions = { node: cfg.url };
 
   // TLS configuration
   if (cfg.caCertPath) {
@@ -29,5 +29,5 @@ export function createElasticsearchClient(cfg: ElasticsearchConfig | undefined):
     clientOptions.auth = { username: cfg.username, password: cfg.password };
   }
 
-  return new Client(clientOptions as Parameters<typeof Client>[0]);
+  return new Client(clientOptions);
 }

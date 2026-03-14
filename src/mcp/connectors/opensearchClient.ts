@@ -10,16 +10,17 @@ import { OpenSearchConfig } from '../../config/types.js';
 export function createOpenSearchClient(cfg: OpenSearchConfig | undefined): Client | undefined {
   if (!cfg || !cfg.url) return undefined;
 
-  const clientOptions: Record<string, unknown> = { node: cfg.url };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clientOptions: any = { node: cfg.url };
 
   // TLS configuration
   if (cfg.caCertPath) {
-    clientOptions.tls = {
+    clientOptions.ssl = {
       ca: fs.readFileSync(cfg.caCertPath),
       rejectUnauthorized: !cfg.tlsInsecure
     };
   } else if (cfg.tlsInsecure) {
-    clientOptions.tls = { rejectUnauthorized: false };
+    clientOptions.ssl = { rejectUnauthorized: false };
   }
 
   // Basic auth (username/password)
@@ -30,6 +31,5 @@ export function createOpenSearchClient(cfg: OpenSearchConfig | undefined): Clien
   // AWS SigV4 note: Install @opensearch-project/opensearch with aws-sigv4
   // and wrap with AwsSigv4Signer from '@opensearch-project/opensearch/aws'.
   // This is documented in config/opensearch.aws.yaml.
-
-  return new Client(clientOptions as Parameters<typeof Client>[0]);
+  return new Client(clientOptions);
 }

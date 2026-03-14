@@ -23,10 +23,15 @@ export function opensearchTools(client: Client | undefined, readOnly = false): M
         required: ['indices', 'query']
       },
       outputSchema: { type: 'object' },
-      handler: async (input: any) => {
-        const { indices, query, from = 0, size = 10 } = input;
+      handler: async (input: unknown) => {
+        const { indices, query, from = 0, size = 10 } = input as {
+          indices: string[];
+          query: Record<string, unknown>;
+          from?: number;
+          size?: number;
+        };
         const res = await client.search({ index: indices.join(','), body: { query }, from, size });
-        return res.body;
+        return res.body as unknown;
       }
     },
     {
@@ -39,9 +44,14 @@ export function opensearchTools(client: Client | undefined, readOnly = false): M
         }
       },
       outputSchema: { type: 'array', items: { type: 'object' } },
-      handler: async (input: any) => {
-        const res = await client.cat.indices({ index: input.pattern || '*', format: 'json', h: 'index,health,status,docs.count,store.size' });
-        return res.body;
+      handler: async (input: unknown) => {
+        const { pattern = '*' } = (input as Record<string, unknown>) ?? {};
+        const res = await client.cat.indices({
+          index: (pattern as string) || '*',
+          format: 'json',
+          h: 'index,health,status,docs.count,store.size'
+        });
+        return res.body as unknown;
       }
     },
     {
@@ -49,9 +59,9 @@ export function opensearchTools(client: Client | undefined, readOnly = false): M
       description: 'Get OpenSearch cluster health and status.',
       inputSchema: { type: 'object', properties: {} },
       outputSchema: { type: 'object' },
-      handler: async () => {
+      handler: async (_input: unknown) => {
         const res = await client.cluster.health();
-        return res.body;
+        return res.body as unknown;
       }
     }
   ];
@@ -71,14 +81,19 @@ export function opensearchTools(client: Client | undefined, readOnly = false): M
         required: ['index', 'document']
       },
       outputSchema: { type: 'object' },
-      handler: async (input: any) => {
+      handler: async (input: unknown) => {
+        const { index, id, document } = input as {
+          index: string;
+          id?: string;
+          document: Record<string, unknown>;
+        };
         const res = await client.index({
-          index: input.index,
-          id: input.id,
-          body: input.document,
+          index,
+          id,
+          body: document,
           refresh: 'wait_for'
         });
-        return res.body;
+        return res.body as unknown;
       }
     });
   }

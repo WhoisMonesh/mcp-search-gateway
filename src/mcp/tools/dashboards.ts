@@ -31,10 +31,11 @@ export function dashboardsTools(cfg: DashboardsConfig | undefined): McpTool[] {
         properties: { url: { type: 'string' } },
         required: ['url']
       },
-      handler: async (input: any) => {
-        const url = buildDashboardsUrl(cfg, { type: input.type, id: input.id, query: input.query });
+      handler: async (input: unknown) => {
+        const { type, id, query } = input as { type: string; id: string; query?: string };
+        const url = buildDashboardsUrl(cfg, { type, id, query });
         if (!url) throw new Error('Dashboards URL not configured');
-        return { url };
+        return { url } as unknown;
       }
     }
   ];

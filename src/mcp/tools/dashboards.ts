@@ -2,6 +2,8 @@ import { DashboardsConfig } from '../../config/types.js';
 import { buildDashboardsUrl } from '../connectors/dashboardsClient.js';
 import type { McpTool } from './registry.js';
 
+type DashboardType = 'dashboard' | 'visualization' | 'search';
+
 /**
  * Dashboards MCP tools for Kibana and OpenSearch Dashboards
  */
@@ -32,7 +34,7 @@ export function dashboardsTools(cfg: DashboardsConfig | undefined): McpTool[] {
         required: ['url']
       },
       handler: async (input: unknown) => {
-        const { type, id, query } = input as { type: string; id: string; query?: string };
+        const { type, id, query } = input as { type: DashboardType; id: string; query?: string };
         const url = buildDashboardsUrl(cfg, { type, id, query });
         if (!url) throw new Error('Dashboards URL not configured');
         return { url } as unknown;

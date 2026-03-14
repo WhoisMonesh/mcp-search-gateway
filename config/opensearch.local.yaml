@@ -1,0 +1,15 @@
+# Local development OpenSearch config
+# Override any value with environment variables (see src/config/index.ts)
+
+serverPort: 8080
+serverBind: 0.0.0.0
+readOnly: false
+
+opensearch:
+  url: http://opensearch:9200
+  username: admin
+  password: admin
+  tlsInsecure: true
+
+dashboards:
+  url: http://dashboards:5601

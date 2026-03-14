@@ -1,0 +1,93 @@
+# ============================================================
+# Bitbucket Pipelines - Build & Push Multi-Arch Image to JFrog Artifactory
+# Required Bitbucket Repository Variables:
+#   JFROG_REGISTRY  - e.g. mycompany.jfrog.io
+#   JFROG_REPO      - e.g. docker-local
+#   JFROG_USERNAME  - Artifactory service account username
+#   JFROG_PASSWORD  - Artifactory service account password/API token (secret)
+# ============================================================
+
+image: docker:24.0.6
+
+options:
+  # 2x runner for Docker builds
+  size: 2x
+  docker: true
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Lint and Build Check
+          image: node:22-alpine
+          caches:
+            - node
+          script:
+            - npm ci
+            - npm run lint
+            - npm run build
+
+      - step:
+          name: Build & Push Multi-Arch to JFrog Artifactory
+          services:
+            - docker
+          caches:
+            - docker
+          script:
+            # Install system tools
+            - apk add --no-cache bash git
+
+            # Enable QEMU for multi-arch cross-compilation
+            - docker run --privileged --rm tonistiigi/binfmt --install all
+
+            # Create and use a buildx builder
+            - docker buildx create --name multiarch-builder --driver docker-container --use
+            - docker buildx inspect --bootstrap
+
+            # Authenticate to JFrog Artifactory
+            - echo "${JFROG_PASSWORD}" | docker login "${JFROG_REGISTRY}" -u "${JFROG_USERNAME}" --password-stdin
+
+            # Compute image reference
+            - export IMAGE="${JFROG_REGISTRY}/${JFROG_REPO}/mcp-search-gateway"
+            - export SHORT_SHA="${BITBUCKET_COMMIT:0:7}"
+
+            # Build and push linux/amd64 + linux/arm64
+            - |
+              docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                -f docker/Dockerfile \
+                -t "${IMAGE}:latest" \
+                -t "${IMAGE}:${SHORT_SHA}" \
+                --push \
+                .
+
+            - echo "Successfully pushed ${IMAGE}:latest and ${IMAGE}:${SHORT_SHA}"
+
+  tags:
+    "v*":
+      - step:
+          name: Tag Release to JFrog
+          services:
+            - docker
+          script:
+            - apk add --no-cache bash
+            - docker run --privileged --rm tonistiigi/binfmt --install all
+            - docker buildx create --name release-builder --driver docker-container --use
+            - docker buildx inspect --bootstrap
+            - echo "${JFROG_PASSWORD}" | docker login "${JFROG_REGISTRY}" -u "${JFROG_USERNAME}" --password-stdin
+            - export IMAGE="${JFROG_REGISTRY}/${JFROG_REPO}/mcp-search-gateway"
+            - |
+              docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                -f docker/Dockerfile \
+                -t "${IMAGE}:${BITBUCKET_TAG}" \
+                -t "${IMAGE}:latest" \
+                --push \
+                .
+
+definitions:
+  services:
+    docker:
+      memory: 4096
+  caches:
+    node: node_modules

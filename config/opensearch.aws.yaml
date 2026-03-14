@@ -1,0 +1,20 @@
+# AWS-managed OpenSearch config
+# Uses IAM role-based auth (SigV4)
+# Set OPENSEARCH_AWS_IAM_ROLE_ARN + AWS_REGION in environment
+# Never put actual ARNs or credentials in this file - use env vars or AWS Secrets Manager
+
+serverPort: 8080
+serverBind: 0.0.0.0
+readOnly: true  # Recommended for production: disable write tools
+
+opensearch:
+  url: https://REPLACE_WITH_YOUR_DOMAIN.REGION.es.amazonaws.com
+  awsIamRoleArn: ""  # Set via env: OPENSEARCH_AWS_IAM_ROLE_ARN
+  awsRegion: ""      # Set via env: AWS_REGION
+  tlsInsecure: false
+
+# Env var overrides:
+# OPENSEARCH_URL=https://your-domain.region.es.amazonaws.com
+# OPENSEARCH_AWS_IAM_ROLE_ARN=arn:aws:iam::123456789012:role/mcp-opensearch-role
+# AWS_REGION=ap-south-1
+# MCP_READ_ONLY=true

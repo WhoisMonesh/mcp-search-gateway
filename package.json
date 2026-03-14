@@ -1,0 +1,37 @@
+{
+  "name": "mcp-search-gateway",
+  "version": "0.1.0",
+  "description": "Production-ready MCP server for OpenSearch & Elasticsearch with multi-arch Docker support",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --watch src --exec ts-node src/index.ts",
+    "lint": "eslint 'src/**/*.ts'",
+    "format": "prettier --write 'src/**/*.ts'",
+    "test": "npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@opensearch-project/opensearch": "^2.12.0",
+    "@elastic/elasticsearch": "^9.0.0",
+    "ajv": "^8.12.0",
+    "dotenv": "^16.4.0",
+    "fastify": "^5.0.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "nodemon": "^3.0.0",
+    "prettier": "^3.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": ["mcp", "opensearch", "elasticsearch", "llm", "ai", "devops"],
+  "license": "MIT"
+}

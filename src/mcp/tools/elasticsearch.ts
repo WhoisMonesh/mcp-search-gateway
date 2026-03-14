@@ -3,6 +3,7 @@ import type { McpTool } from './registry.js';
 
 /**
  * Elasticsearch MCP tools
+ * Uses @elastic/elasticsearch v9 API (no .body wrapper)
  * readOnly flag disables write operations
  */
 export function elasticsearchTools(client: Client | undefined, readOnly = false): McpTool[] {
@@ -23,10 +24,20 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
         required: ['indices', 'query']
       },
       outputSchema: { type: 'object' },
-      handler: async (input: any) => {
-        const { indices, query, from = 0, size = 10 } = input;
-        const res = await client.search({ index: indices.join(','), body: { query }, from, size });
-        return res.body;
+      handler: async (input: Record<string, unknown>) => {
+        const { indices, query, from = 0, size = 10 } = input as {
+          indices: string[];
+          query: Record<string, unknown>;
+          from?: number;
+          size?: number;
+        };
+        const res = await client.search({
+          index: indices.join(','),
+          query: query as Record<string, unknown>,
+          from,
+          size
+        });
+        return res as unknown as Record<string, unknown>;
       }
     },
     {
@@ -39,9 +50,13 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
         }
       },
       outputSchema: { type: 'array', items: { type: 'object' } },
-      handler: async (input: any) => {
-        const res = await client.cat.indices({ index: input.pattern || '*', format: 'json', h: 'index,health,status,docs.count,store.size' });
-        return res.body;
+      handler: async (input: Record<string, unknown>) => {
+        const res = await client.cat.indices({
+          index: (input.pattern as string) || '*',
+          format: 'json',
+          h: ['index', 'health', 'status', 'docs.count', 'store.size']
+        });
+        return res as unknown as Record<string, unknown>;
       }
     },
     {
@@ -51,35 +66,58 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
       outputSchema: { type: 'object' },
       handler: async () => {
         const res = await client.cluster.health();
-        return res.body;
+        return res as unknown as Record<string, unknown>;
       }
     }
   ];
 
   if (!readOnly) {
-    tools.push({
-      name: 'elasticsearch_index_document',
-      description: 'Index or update a document in Elasticsearch.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          index: { type: 'string' },
-          id: { type: 'string' },
-          document: { type: 'object' }
+    tools.push(
+      {
+        name: 'elasticsearch_index_document',
+        description: 'Index or update a document in Elasticsearch.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            index: { type: 'string' },
+            id: { type: 'string' },
+            document: { type: 'object' }
+          },
+          required: ['index', 'document']
         },
-        required: ['index', 'document']
+        outputSchema: { type: 'object' },
+        handler: async (input: Record<string, unknown>) => {
+          const res = await client.index({
+            index: input.index as string,
+            id: input.id as string | undefined,
+            document: input.document as Record<string, unknown>,
+            refresh: 'wait_for'
+          });
+          return res as unknown as Record<string, unknown>;
+        }
       },
-      outputSchema: { type: 'object' },
-      handler: async (input: any) => {
-        const res = await client.index({
-          index: input.index,
-          id: input.id,
-          body: input.document,
-          refresh: 'wait_for'
-        });
-        return res.body;
+      {
+        name: 'elasticsearch_delete_document',
+        description: 'Delete a document by ID from Elasticsearch.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            index: { type: 'string' },
+            id: { type: 'string' }
+          },
+          required: ['index', 'id']
+        },
+        outputSchema: { type: 'object' },
+        handler: async (input: Record<string, unknown>) => {
+          const res = await client.delete({
+            index: input.index as string,
+            id: input.id as string,
+            refresh: 'wait_for'
+          });
+          return res as unknown as Record<string, unknown>;
+        }
       }
-    });
+    );
   }
 
   return tools;

@@ -1,0 +1,88 @@
+# ============================================================
+# GitHub Actions: Multi-Architecture Docker Build & Push
+# Builds linux/amd64 + linux/arm64 using Docker buildx + QEMU
+# Pushes to GHCR (ghcr.io) on push to main and version tags
+# ============================================================
+
+name: Docker Multi-Arch Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAME: mcp-search-gateway
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build & Push Multi-Arch Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # Required to push to GHCR
+      id-token: write   # Required for OIDC-based attestations (optional)
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up QEMU for cross-platform emulation (arm64 on amd64 runner)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Step 3: Set up Docker Buildx (enables multi-platform builds)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+
+      # Step 4: Authenticate to GHCR using GITHUB_TOKEN (no extra secrets needed)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 5: Extract Docker metadata for tags and labels
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Tag as 'latest' on push to main branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag with semantic version on version tags (e.g. v1.2.3)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            # Tag with short git SHA for traceability
+            type=sha,prefix=sha-
+
+      # Step 6: Build and push multi-arch image
+      # Platforms: linux/amd64 (x86_64 cloud) + linux/arm64 (Apple M-series, Graviton)
+      - name: Build and push multi-arch Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Use GitHub Actions cache for faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 7: Output image digest for verification and attestation
+      - name: Output image digest
+        run: |
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"

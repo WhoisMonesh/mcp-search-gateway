@@ -24,7 +24,7 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
         required: ['indices', 'query']
       },
       outputSchema: { type: 'object' },
-      handler: async (input: Record<string, unknown>) => {
+      handler: async (input: unknown) => {
         const { indices, query, from = 0, size = 10 } = input as {
           indices: string[];
           query: Record<string, unknown>;
@@ -37,7 +37,7 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
           from,
           size
         });
-        return res as unknown as Record<string, unknown>;
+        return res as unknown;
       }
     },
     {
@@ -50,13 +50,14 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
         }
       },
       outputSchema: { type: 'array', items: { type: 'object' } },
-      handler: async (input: Record<string, unknown>) => {
+      handler: async (input: unknown) => {
+        const { pattern = '*' } = (input as Record<string, unknown>) ?? {};
         const res = await client.cat.indices({
-          index: (input.pattern as string) || '*',
+          index: (pattern as string) || '*',
           format: 'json',
           h: ['index', 'health', 'status', 'docs.count', 'store.size']
         });
-        return res as unknown as Record<string, unknown>;
+        return res as unknown;
       }
     },
     {
@@ -64,9 +65,9 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
       description: 'Get Elasticsearch cluster health and status.',
       inputSchema: { type: 'object', properties: {} },
       outputSchema: { type: 'object' },
-      handler: async () => {
+      handler: async (_input: unknown) => {
         const res = await client.cluster.health();
-        return res as unknown as Record<string, unknown>;
+        return res as unknown;
       }
     }
   ];
@@ -86,14 +87,19 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
           required: ['index', 'document']
         },
         outputSchema: { type: 'object' },
-        handler: async (input: Record<string, unknown>) => {
+        handler: async (input: unknown) => {
+          const { index, id, document } = input as {
+            index: string;
+            id?: string;
+            document: Record<string, unknown>;
+          };
           const res = await client.index({
-            index: input.index as string,
-            id: input.id as string | undefined,
-            document: input.document as Record<string, unknown>,
+            index,
+            id,
+            document,
             refresh: 'wait_for'
           });
-          return res as unknown as Record<string, unknown>;
+          return res as unknown;
         }
       },
       {
@@ -108,13 +114,14 @@ export function elasticsearchTools(client: Client | undefined, readOnly = false)
           required: ['index', 'id']
         },
         outputSchema: { type: 'object' },
-        handler: async (input: Record<string, unknown>) => {
+        handler: async (input: unknown) => {
+          const { index, id } = input as { index: string; id: string };
           const res = await client.delete({
-            index: input.index as string,
-            id: input.id as string,
+            index,
+            id,
             refresh: 'wait_for'
           });
-          return res as unknown as Record<string, unknown>;
+          return res as unknown;
         }
       }
     );

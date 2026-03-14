@@ -1,0 +1,14 @@
+# Local development Elasticsearch config
+
+serverPort: 8080
+serverBind: 0.0.0.0
+readOnly: false
+
+elasticsearch:
+  url: http://elasticsearch:9200
+  username: elastic
+  password: changeme
+  tlsInsecure: true
+
+dashboards:
+  url: http://kibana:5601
